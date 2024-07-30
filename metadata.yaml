@@ -1,0 +1,5 @@
+homepage: "https://www.brainsum.com"
+#documentation: "https://www.example.com/documentation"
+versions:
+  - sha: aadd5c7d22cd622e227a6b97d4f4507ecc6e9d8b
+    changeNotes: Initial Version
