@@ -1,4 +1,4 @@
-﻿___TERMS_OF_SERVICE___
+﻿﻿___TERMS_OF_SERVICE___
 
 By creating or modifying this file you agree to Google Tag Manager's Community
 Template Gallery Developer Terms of Service available at
@@ -95,16 +95,16 @@ ___TEMPLATE_PARAMETERS___
 
 ___SANDBOXED_JS_FOR_WEB_TEMPLATE___
 
-// The first two lines are optional, use if you want to enable logging
 const log = require('logToConsole');
 const setDefaultConsentState = require('setDefaultConsentState');
 const updateConsentState = require('updateConsentState');
 const getCookieValues = require('getCookieValues');
 const callInWindow = require('callInWindow');
-const setInWindow = require('setInWindow');
 const JSON = require('JSON');
 const gtagSet = require('gtagSet');
 const COOKIE_NAME = 'cconsent';
+const isConsentGranted = require('isConsentGranted');
+const callLater = require('callLater');
 
 const eeaRegions = [
   "AT",
@@ -145,7 +145,6 @@ const eeaRegions = [
  *   strings
  */
 const splitInput = (input) => {
-  log('input', input);
   return input.split(',')
       .map(entry => entry.trim())
       .filter(entry => entry.length !== 0);
@@ -189,17 +188,42 @@ const onUserConsent = (consent) => {
   
   updateConsentState(consentModeStates);
 };
+
+/*
+ *   Called when cookie is not set. Checks the current consent status and calls
+ *   updateCategoriesBasedOnConsentSetter passing those states. This will update the
+ *   banner UI reflecting default Regional consent status.
+ */
+const checkInitialConsentStatus = () => {
+  const analyticsStorageGranted = isConsentGranted('analytics_storage');
+  const adStorageGranted = isConsentGranted('ad_storage');
+  const adUserDataGranted = isConsentGranted('ad_user_data');
+  const adPersonalization = isConsentGranted('ad_personalization');
+  
+  callInWindow('updateCategoriesBasedOnConsentSetter', {
+    analytics_storage: analyticsStorageGranted,
+    ad_storage: adStorageGranted,
+    ad_user_data: adUserDataGranted,
+    ad_personalization: adPersonalization
+  });
+};
+
+
+
 /*
  *   Executes the default command, sets the developer ID, and sets up the consent
  *   update callback
  */
 const main = (data) => {
+  // check if cookie is set
+  const settings = getCookieValues(COOKIE_NAME);
+  
   /*
    * Optional settings using gtagSet
    */
   gtagSet({
-  url_passthrough: data.url_passthrough || false,
-  ads_data_redaction: data.ads_data_redaction || false
+    url_passthrough: data.url_passthrough || false,
+    ads_data_redaction: data.ads_data_redaction || false
   });
   
   // Set default consent state(s)
@@ -210,14 +234,19 @@ const main = (data) => {
     setDefaultConsentState(defaultData);
   });
   
-  // Check if cookie is set and has values that correspond to Google consent
+  
+  // Check if cookie is set, and if not, check current consent status after setting the default state
+  if (!settings || settings.length === 0) {
+    callLater(checkInitialConsentStatus, 600);
+  }
+  
+  // Check if cookie has values that correspond to Google consent
   // types. If it does, run onUserConsent().
-  const settings = getCookieValues(COOKIE_NAME);
-  if (settings && !!settings.length) {
+  if (settings && settings.length > 0) {
     const parsedCookie = JSON.parse(settings);
     const consentModeFromCookie = parsedCookie.consentMode;
     onUserConsent(consentModeFromCookie);
-  }
+  } 
   /**
    *   Add event listener to trigger update when consent changes
    *
@@ -230,6 +259,8 @@ const main = (data) => {
    *   consent types.
    */
   callInWindow('updateConsentModeSetterFn', onUserConsent);
+  
+  
 };
 main(data);
 data.gtmOnSuccess();
@@ -253,6 +284,9 @@ ___WEB_PERMISSIONS___
           }
         }
       ]
+    },
+    "clientAnnotations": {
+      "isEditedByUser": true
     },
     "isRequired": true
   },
@@ -292,6 +326,45 @@ ___WEB_PERMISSIONS___
                   {
                     "type": 1,
                     "string": "updateConsentModeSetterFn"
+                  },
+                  {
+                    "type": 8,
+                    "boolean": false
+                  },
+                  {
+                    "type": 8,
+                    "boolean": false
+                  },
+                  {
+                    "type": 8,
+                    "boolean": true
+                  }
+                ]
+              },
+              {
+                "type": 3,
+                "mapKey": [
+                  {
+                    "type": 1,
+                    "string": "key"
+                  },
+                  {
+                    "type": 1,
+                    "string": "read"
+                  },
+                  {
+                    "type": 1,
+                    "string": "write"
+                  },
+                  {
+                    "type": 1,
+                    "string": "execute"
+                  }
+                ],
+                "mapValue": [
+                  {
+                    "type": 1,
+                    "string": "updateCategoriesBasedOnConsentSetter"
                   },
                   {
                     "type": 8,
@@ -385,7 +458,7 @@ ___WEB_PERMISSIONS___
                   },
                   {
                     "type": 8,
-                    "boolean": false
+                    "boolean": true
                   },
                   {
                     "type": 8,
@@ -416,7 +489,7 @@ ___WEB_PERMISSIONS___
                   },
                   {
                     "type": 8,
-                    "boolean": false
+                    "boolean": true
                   },
                   {
                     "type": 8,
@@ -447,7 +520,7 @@ ___WEB_PERMISSIONS___
                   },
                   {
                     "type": 8,
-                    "boolean": false
+                    "boolean": true
                   },
                   {
                     "type": 8,
@@ -478,7 +551,7 @@ ___WEB_PERMISSIONS___
                   },
                   {
                     "type": 8,
-                    "boolean": false
+                    "boolean": true
                   },
                   {
                     "type": 8,
@@ -509,7 +582,7 @@ ___WEB_PERMISSIONS___
                   },
                   {
                     "type": 8,
-                    "boolean": false
+                    "boolean": true
                   },
                   {
                     "type": 8,
@@ -540,7 +613,7 @@ ___WEB_PERMISSIONS___
                   },
                   {
                     "type": 8,
-                    "boolean": false
+                    "boolean": true
                   },
                   {
                     "type": 8,
@@ -571,7 +644,7 @@ ___WEB_PERMISSIONS___
                   },
                   {
                     "type": 8,
-                    "boolean": false
+                    "boolean": true
                   },
                   {
                     "type": 8,
@@ -682,6 +755,5 @@ setup: |-
 
 ___NOTES___
 
-Created on 7/30/2024, 12:34:19 PM
-
+Created on 8/16/2024, 12:41:15 PM
 
